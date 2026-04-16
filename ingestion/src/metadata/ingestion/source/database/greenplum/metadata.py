@@ -51,9 +51,11 @@ from metadata.ingestion.source.database.greenplum.queries import (
     GREENPLUM_PARTITION_DETAILS,
 )
 from metadata.ingestion.source.database.greenplum.utils import (
+    get_all_table_ddls,
     get_column_info,
     get_columns,
     get_table_comment,
+    get_table_ddl,
     get_view_definition,
 )
 from metadata.ingestion.source.database.multi_db_source import MultiDBSource
@@ -62,9 +64,7 @@ from metadata.utils.filters import filter_by_database
 from metadata.utils.logger import ingestion_logger
 from metadata.utils.sqlalchemy_utils import (
     get_all_table_comments,
-    get_all_table_ddls,
     get_all_view_definitions,
-    get_table_ddl,
 )
 
 TableKey = namedtuple("TableKey", ["schema", "table_name"])

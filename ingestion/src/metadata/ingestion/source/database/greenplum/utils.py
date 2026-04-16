@@ -14,15 +14,20 @@
 Greenplum SQLAlchemy util methods
 """
 import re
+import traceback
 from typing import Dict, Tuple
 
 from sqlalchemy import sql, util
 from sqlalchemy.dialects.postgresql.base import ENUM
 from sqlalchemy.engine import reflection
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql import sqltypes
+
+from metadata.utils.logger import ingestion_logger
 
 from metadata.ingestion.source.database.greenplum.queries import (
     GREENPLUM_COL_IDENTITY,
+    GREENPLUM_GET_ALL_TABLE_DDLS,
     GREENPLUM_SQL_COLUMNS,
     GREENPLUM_TABLE_COMMENTS,
     GREENPLUM_VIEW_DEFINITIONS,
@@ -32,6 +37,7 @@ from metadata.utils.sqlalchemy_utils import (
     get_view_definition_wrapper,
 )
 
+logger = ingestion_logger()
 
 @reflection.cache
 def get_table_comment(
@@ -347,3 +353,41 @@ def get_view_definition(
         schema=schema,
         query=GREENPLUM_VIEW_DEFINITIONS,
     )
+
+
+@reflection.cache
+def get_all_table_ddls(
+    self, connection, query, schema_name, **kw
+):  # pylint: disable=unused-argument
+    """
+    Method to fetch ddl of all available tables using direct SQL 
+    instead of reflection to improve performance.
+    """
+    try:
+        self.all_table_ddls: Dict[Tuple[str, str], str] = {}
+        self.current_db = schema_name
+        result = connection.execute(
+            sql.text(GREENPLUM_GET_ALL_TABLE_DDLS), {"schema_name": schema_name}
+        ).fetchall()
+        for row in result:
+            self.all_table_ddls[(row.schema_name, row.table_name)] = row.ddl
+    except Exception as exc:
+        logger.debug(traceback.format_exc())
+        logger.debug(f"Failed to get table ddls for {schema_name}: {exc}")
+        if isinstance(exc, ProgrammingError):
+            try:
+                connection.rollback()
+            except Exception:
+                pass
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+
+def get_table_ddl(
+    self, connection, table_name, schema=None, **kw
+):  # pylint: disable=unused-argument
+    if not hasattr(self, "all_table_ddls") or getattr(self, "current_db", None) != schema:
+        self.get_all_table_ddls(connection, query=None, schema_name=schema)
+    return getattr(self, "all_table_ddls", {}).get((schema, table_name))
