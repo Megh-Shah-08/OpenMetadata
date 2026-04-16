@@ -146,7 +146,7 @@ SELECT
     string_agg(
         '    ' || a.attname || ' ' || pg_catalog.format_type(a.atttypid, a.atttypmod) ||
         CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
-        CASE WHEN d.adsrc IS NOT NULL THEN ' DEFAULT ' || d.adsrc ELSE '' END,
+        CASE WHEN d.adbin IS NOT NULL THEN ' DEFAULT ' || pg_catalog.pg_get_expr(d.adbin, d.adrelid) ELSE '' END,
         ',' || chr(10) ORDER BY a.attnum
     ) || chr(10) || ')' ||
     CASE
