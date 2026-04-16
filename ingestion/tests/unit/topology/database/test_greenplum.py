@@ -76,3 +76,28 @@ class greenplumUnitTest(TestCase):
     def test_close_connection(self, engine, connection):
         connection.return_value = True
         self.greenplum_source.close()
+
+    @patch("sqlalchemy.engine.base.Connection")
+    def test_get_all_table_ddls(self, mock_connection):
+        from metadata.ingestion.source.database.greenplum.utils import get_all_table_ddls
+
+        class MockRow:
+            def __init__(self):
+                self.schema_name = "public"
+                self.table_name = "user_table"
+                self.ddl = "CREATE TABLE public.user_table (id integer)"
+
+        mock_connection.execute.return_value.fetchall.return_value = [MockRow()]
+
+        class MockInspector:
+            def __init__(self):
+                self.all_table_ddls = {}
+
+        mock_inspector = MockInspector()
+        get_all_table_ddls(mock_inspector, mock_connection, query=None, schema_name="public")
+
+        self.assertEqual(
+            mock_inspector.all_table_ddls.get(("public", "user_table")),
+            "CREATE TABLE public.user_table (id integer)"
+        )
+        self.assertEqual(mock_inspector.current_db, "public")
