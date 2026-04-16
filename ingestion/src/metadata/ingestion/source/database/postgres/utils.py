@@ -26,6 +26,7 @@ from sqlalchemy.sql import sqltypes
 from metadata.ingestion.source.database.postgres.queries import (
     POSTGRES_COL_IDENTITY,
     POSTGRES_FETCH_FK,
+    POSTGRES_GET_ALL_TABLE_DDLS,
     POSTGRES_GET_SCHEMA_NAMES,
     POSTGRES_GET_SERVER_VERSION,
     POSTGRES_SQL_COLUMNS,
@@ -35,7 +36,11 @@ from metadata.ingestion.source.database.postgres.queries import (
 )
 from metadata.utils.logger import utils_logger
 from metadata.utils.sqlalchemy_utils import (
+    get_all_table_ddls as get_all_table_ddls_sqlalchemy,
+)
+from metadata.utils.sqlalchemy_utils import (
     get_table_comment_wrapper,
+    get_table_ddl_wrapper,
     get_table_owner_wrapper,
     get_view_definition_wrapper,
 )
@@ -487,6 +492,25 @@ def get_view_definition(self, connection, table_name, schema=None, **kw):
         table_name=table_name,
         schema=schema,
         query=POSTGRES_VIEW_DEFINITIONS,
+    )
+
+
+@reflection.cache
+def get_all_table_ddls(self, connection, query=None, schema_name=None, **kw):
+    return get_all_table_ddls_sqlalchemy(
+        self, connection, POSTGRES_GET_ALL_TABLE_DDLS, schema_name, **kw
+    )
+
+
+def get_table_ddl(
+    self, connection, table_name, schema=None, **kw
+):  # pylint: disable=unused-argument
+    return get_table_ddl_wrapper(
+        self,
+        connection=connection,
+        query=POSTGRES_GET_ALL_TABLE_DDLS,
+        table_name=table_name,
+        schema=schema,
     )
 
 

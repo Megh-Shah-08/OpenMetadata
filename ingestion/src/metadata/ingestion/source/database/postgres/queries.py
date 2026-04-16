@@ -196,6 +196,31 @@ POSTGRES_GET_SERVER_VERSION = """
 show server_version_num
 """
 
+POSTGRES_GET_ALL_TABLE_DDLS = """
+SELECT
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    'CREATE TABLE ' || n.nspname || '.' || c.relname || ' (' || chr(10) ||
+    string_agg(
+        '    ' || a.attname || ' ' || pg_catalog.format_type(a.atttypid, a.atttypmod) ||
+        CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
+        CASE WHEN d.adsrc IS NOT NULL THEN ' DEFAULT ' || d.adsrc ELSE '' END,
+        ',' || chr(10) ORDER BY a.attnum
+    ) || chr(10) || ')' ||
+    CASE
+        WHEN c.reloptions IS NOT NULL
+        THEN chr(10) || 'WITH (' || array_to_string(c.reloptions, ', ') || ')'
+        ELSE ''
+    END AS ddl
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+LEFT JOIN pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
+WHERE n.nspname = :schema_name
+  AND c.relkind = 'r'
+GROUP BY n.nspname, c.relname, c.reloptions, c.oid
+"""
+
 # pylint: disable=anomalous-backslash-in-string
 POSTGRES_GET_SCHEMA_NAMES = """
 SELECT nspname FROM pg_namespace

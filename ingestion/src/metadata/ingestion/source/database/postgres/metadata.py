@@ -71,12 +71,14 @@ from metadata.ingestion.source.database.postgres.queries import (
     POSTGRES_SCHEMA_COMMENTS,
 )
 from metadata.ingestion.source.database.postgres.utils import (
+    get_all_table_ddls,
     get_column_info,
     get_columns,
     get_etable_owner,
     get_foreign_keys,
     get_schema_names,
     get_table_comment,
+    get_table_ddl,
     get_table_owner,
     get_view_definition,
 )
@@ -86,11 +88,9 @@ from metadata.utils.importer import import_side_effects
 from metadata.utils.logger import ingestion_logger
 from metadata.utils.sqlalchemy_utils import (
     get_all_table_comments,
-    get_all_table_ddls,
     get_all_table_owners,
     get_all_view_definitions,
     get_schema_descriptions,
-    get_table_ddl,
 )
 from metadata.utils.tag_utils import get_ometa_tag_and_classification
 

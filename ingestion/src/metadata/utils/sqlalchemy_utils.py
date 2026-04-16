@@ -152,10 +152,19 @@ def get_all_table_ddls(
     try:
         self.all_table_ddls: Dict[Tuple[str, str], str] = {}
         self.current_db: str = schema_name
-        meta = MetaData()
-        meta.reflect(bind=connection, schema=schema_name)
-        for table in meta.sorted_tables or []:
-            self.all_table_ddls[(table.schema, table.name)] = str(CreateTable(table))
+        
+        if query:
+            result = connection.execute(
+                text(query) if isinstance(query, str) else query,
+                {"schema_name": schema_name}
+            ).fetchall()
+            for row in result:
+                self.all_table_ddls[(row.schema_name, row.table_name)] = row.ddl
+        else:
+            meta = MetaData()
+            meta.reflect(bind=connection, schema=schema_name)
+            for table in meta.sorted_tables or []:
+                self.all_table_ddls[(table.schema, table.name)] = str(CreateTable(table))
     except Exception as exc:
         logger.debug(traceback.format_exc())
         logger.debug(f"Failed to get table ddls for {schema_name}: {exc}")
